@@ -1,6 +1,7 @@
 const http = require('http');
-// const fs = require('fs');
+const fs = require('fs');
 
+const path = __dirname.substring(0, __dirname.lastIndexOf('\\'));
 const PORT = 8338;
 
 function getTimestamp() {
@@ -16,16 +17,36 @@ function getTimestamp() {
     return h.toString() + ':' + m.toString();
 }
 
+function checkForPackage(package) {
+    let b = fs.existsSync(path + '\\packages\\' + package + '.json');
+    return b;
+}
+
 const server = http.createServer(function (req, res) {
     console.log('[' + getTimestamp() + '] ' + req.method + ' request recieved.');
+
+    let method = req.url.substring(req.url.indexOf('/')+1, req.url.lastIndexOf('/'));
+    let pkg = req.url.substring(req.url.lastIndexOf('/')+1, req.url.length);
+
     if (req.method == 'GET') {
-        res.writeHead(200, {'Content-Type': 'text/plain'});
-        res.end('Hello, world!');
+        if (checkForPackage(pkg) && method == 'check') {
+            res.writeHead(200, {'Content-Type': 'text/plain'});
+            res.end('Package found!');
+        } else if (method == 'check') {
+            res.writeHead(404, {'Content-Type': 'text/plain'});
+            res.end('Package not found!');
+        }
+        
+        if (checkForPackage(pkg) && method == 'content') {
+            let json = JSON.parse(fs.readFileSync(path + '\\packages\\' + pkg + '.json', 'utf-8'));
+            res.writeHead(200, {'Content-Type': 'text/json'});
+            res.end(JSON.stringify(json.content));
+        }
     } else {
         res.writeHead(402, {'Content-Type': 'text/plain'});
         res.write('This method is not supported.');
         res.end();
-        console.log('[' + getTimestamp() + '] ' + 'An unsupported method was called.' )
+        console.log('[' + getTimestamp() + '] ' + 'An unsupported method was called.' );
     }
 });
 

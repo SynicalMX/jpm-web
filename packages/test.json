@@ -1,3 +1,11 @@
 {
-    "res" : "Found!"
+    "info": {
+        "name": "Test",
+        "desc": "A test package",
+        "authors": ["Synical"],
+        "version": "1.0"
+    },
+    "content": [
+        "example.com"
+    ]
 }
