@@ -32,16 +32,22 @@ const server = http.createServer(function (req, res) {
         if (checkForPackage(pkg) && method == 'check') {
             res.writeHead(200, {'Content-Type': 'text/plain'});
             res.end('Package found!');
+            return
         } else if (method == 'check') {
             res.writeHead(404, {'Content-Type': 'text/plain'});
             res.end('Package not found!');
+            return
         }
         
         if (checkForPackage(pkg) && method == 'content') {
             let json = JSON.parse(fs.readFileSync(path + '\\packages\\' + pkg + '.json', 'utf-8'));
             res.writeHead(200, {'Content-Type': 'text/json'});
             res.end(JSON.stringify(json.content));
+            return
         }
+
+        res.writeHead(404, {'Content-Type': 'text/json'});
+        res.end('404 Not Found');
     } else {
         res.writeHead(402, {'Content-Type': 'text/plain'});
         res.write('This method is not supported.');
