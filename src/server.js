@@ -1,26 +1,16 @@
+// Import libraries
 const http = require('http');
 const fs = require('fs');
-
-const { initializeApp, applicationDefault, cert } = require('firebase-admin/app');
 const { getFirestore, Timestamp, FieldValue } = require('firebase-admin/firestore');
-
-initializeApp({
-    credential: applicationDefault()
-});
-  
 const db = getFirestore();
-async function quickstartListen(db) {
-    // [START firestore_setup_dataset_read]
-    const snapshot = await db.collection('packages').get();
-    snapshot.forEach((doc) => {
-      console.log(doc.id, '=>', doc.data());
-    });
-    // [END firestore_setup_dataset_read]
-}
+
+// Import functions
+import { checkForPackage } from './database.js';
 
 const path = __dirname.substring(0, __dirname.lastIndexOf('\\'));
 const PORT = 8338;
 
+// Gets current time and formats it for a timestamp
 function getTimestamp() {
     let date = new Date();
 
@@ -34,11 +24,7 @@ function getTimestamp() {
     return h.toString() + ':' + m.toString();
 }
 
-function checkForPackage(package) {
-    let b = fs.existsSync(path + '\\packages\\' + package + '.json');
-    return b;
-}
-
+// Main server
 const server = http.createServer(function (req, res) {
     console.log('[' + getTimestamp() + '] ' + req.method + ' request recieved.');
 
@@ -73,6 +59,7 @@ const server = http.createServer(function (req, res) {
     }
 });
 
+// Start server
 server.listen(PORT);
 console.log('Server is running on port ' + PORT);
 quickstartListen(db);
