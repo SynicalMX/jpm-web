@@ -1,16 +1,32 @@
 // Import libraries
-const http = require('http');
+const express = require('express');
+const app = express();
 const fs = require('fs');
-const { getFirestore, Timestamp, FieldValue } = require('firebase-admin/firestore');
+const { initializeApp, cert } = require('firebase-admin/app');
+const { getFirestore } = require('firebase-admin/firestore');
+const serviceAccount = require('../firebase/admin.json');
+
+initializeApp({
+    credential: cert(serviceAccount)
+});
 const db = getFirestore();
 
-// Import functions
-import { checkForPackage } from './database.js';
+function checkForPackage(pkg) {
+    var database = db.collectionGroup('packages').where('name', '==', pkg);
+    database.get().then(function (querySnapshot) {
+        querySnapshot.forEach(function (doc) {
+            console.log(doc.id, ' => ', doc.data());
+        });
+    });
+    return true;
+}
 
 const path = __dirname.substring(0, __dirname.lastIndexOf('\\'));
 const PORT = 8338;
 
-// Gets current time and formats it for a timestamp
+/* 
+    Untility Functions
+*/
 function getTimestamp() {
     let date = new Date();
 
@@ -24,42 +40,39 @@ function getTimestamp() {
     return h.toString() + ':' + m.toString();
 }
 
-// Main server
-const server = http.createServer(function (req, res) {
-    console.log('[' + getTimestamp() + '] ' + req.method + ' request recieved.');
+// Main Server Functions
 
-    let method = req.url.substring(req.url.indexOf('/')+1, req.url.lastIndexOf('/'));
-    let pkg = req.url.substring(req.url.lastIndexOf('/')+1, req.url.length);
+app.get('/check/*', (req, res) => {
+    let pkg = req.url.substring(req.url.lastIndexOf('/') + 1, req.url.length);
 
-    if (req.method == 'GET') {
-        if (checkForPackage(pkg) && method == 'check') {
-            res.writeHead(200, {'Content-Type': 'text/plain'});
-            res.end('Package found!');
-            return
-        } else if (method == 'check') {
-            res.writeHead(404, {'Content-Type': 'text/plain'});
-            res.end('Package not found!');
-            return
-        }
-        
-        if (checkForPackage(pkg) && method == 'content') {
-            let json = JSON.parse(fs.readFileSync(path + '\\packages\\' + pkg + '.json', 'utf-8'));
-            res.writeHead(200, {'Content-Type': 'text/json'});
-            res.end(JSON.stringify(json.content));
-            return
-        }
+    console.log('[' + getTimestamp() + '] Check request recieved.');
 
-        res.writeHead(404, {'Content-Type': 'text/json'});
-        res.end('404 Not Found');
+    if (checkForPackage(pkg)) {
+        console.log('Wrote to ' + req.ip)
+        res.writeHead(200, { 'Content-Type': 'text/plain' });
+        res.end('Package found!');
     } else {
-        res.writeHead(402, {'Content-Type': 'text/plain'});
-        res.write('This method is not supported.');
-        res.end();
-        console.log('[' + getTimestamp() + '] ' + 'An unsupported method was called.' );
+        console.log('Wrote an error to ' + req.ip)
+        res.writeHead(404, { 'Content-Type': 'text/json' });
+        res.end('404 Not Found');
     }
 });
 
-// Start server
-server.listen(PORT);
-console.log('Server is running on port ' + PORT);
-quickstartListen(db);
+app.get('/content/*', (req, res) => {
+    let pkg = req.url.substring(req.url.lastIndexOf('/') + 1, req.url.length);
+
+    console.log('[' + getTimestamp() + '] Content request recieved.');
+
+    if (checkForPackage(pkg)) {
+        let json = JSON.parse(fs.readFileSync(path + '\\packages\\' + pkg + '.json', 'utf-8'));
+        res.writeHead(200, { 'Content-Type': 'text/json' });
+        res.end(JSON.stringify(json.content));
+    } else {
+        res.writeHead(404, { 'Content-Type': 'text/json' });
+        res.end('404 Not Found');
+    }
+});
+
+app.listen(process.env.PORT || PORT, () => {
+    console.log(`Server listening on port ${process.env.PORT || PORT}`);
+});
